@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Excel Import & Export Sandbox</title>
+    <style>
+      :root {
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          'Segoe UI',
+          sans-serif;
+        color: #193049;
+        background: #f4f7fb;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+      }
+      header {
+        background: #123654;
+        color: white;
+        padding: 2.5rem max(1.5rem, calc((100vw - 1100px) / 2));
+      }
+      header h1 {
+        margin: 0 0 0.45rem;
+        font-size: clamp(1.8rem, 3vw, 2.6rem);
+      }
+      header p {
+        margin: 0;
+        color: #d7e5ef;
+        max-width: 48rem;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 1100px;
+        margin: -1.2rem auto 3rem;
+        padding: 0 1.5rem;
+      }
+      .identity,
+      .panel {
+        background: white;
+        border: 1px solid #dce5ed;
+        border-radius: 14px;
+        box-shadow: 0 8px 28px #1439540d;
+      }
+      .identity {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.8rem 1.3rem;
+        padding: 1rem 1.4rem;
+        margin-bottom: 1.3rem;
+      }
+      .identity label {
+        font-weight: 700;
+      }
+      .identity input {
+        width: 13rem;
+      }
+      .identity small {
+        color: #52677a;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.3fr) minmax(17rem, 1fr);
+        gap: 1.3rem;
+        align-items: start;
+      }
+      .panel {
+        padding: 1.5rem;
+      }
+      h2 {
+        margin: 0 0 0.35rem;
+        font-size: 1.35rem;
+      }
+      h3 {
+        font-size: 1rem;
+        margin: 0 0 0.55rem;
+      }
+      p {
+        line-height: 1.5;
+      }
+      .muted {
+        color: #52677a;
+        margin: 0.25rem 0 1.3rem;
+      }
+      .step {
+        border-top: 1px solid #e3eaf0;
+        padding: 1.2rem 0;
+      }
+      .step:last-child {
+        padding-bottom: 0;
+      }
+      .step-title {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        margin-bottom: 0.6rem;
+      }
+      .number {
+        width: 1.7rem;
+        height: 1.7rem;
+        display: inline-grid;
+        place-items: center;
+        flex: none;
+        color: #075784;
+        background: #e1f3ff;
+        border-radius: 50%;
+        font-weight: 700;
+      }
+      .step-title h3 {
+        margin: 0;
+      }
+      input[type='text'],
+      input[type='file'] {
+        font: inherit;
+        border: 1px solid #aebdca;
+        border-radius: 8px;
+        padding: 0.55rem 0.65rem;
+        color: #193049;
+        max-width: 100%;
+      }
+      input[type='file'] {
+        display: block;
+        width: 100%;
+        margin: 0.6rem 0 0.9rem;
+      }
+      input:focus-visible,
+      button:focus-visible,
+      a:focus-visible {
+        outline: 3px solid #53a9dc;
+        outline-offset: 2px;
+      }
+      button,
+      .button-link {
+        appearance: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        border: 1px solid #126b9d;
+        border-radius: 8px;
+        padding: 0.65rem 1rem;
+        background: #126b9d;
+        color: white;
+        font: inherit;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      button:hover:not(:disabled),
+      .button-link:hover {
+        background: #0c537d;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.52;
+      }
+      .secondary {
+        background: white;
+        color: #126b9d;
+      }
+      .secondary:hover:not(:disabled) {
+        background: #edf7fc;
+      }
+      .status {
+        min-height: 1.5rem;
+        margin: 0.8rem 0 0;
+        color: #52677a;
+      }
+      .status[data-state='error'] {
+        color: #a32626;
+      }
+      .status[data-state='success'] {
+        color: #136641;
+      }
+      .result {
+        margin-top: 1rem;
+        padding: 1rem;
+        border: 1px solid #dce5ed;
+        border-radius: 10px;
+        background: #f8fafc;
+      }
+      .result[hidden] {
+        display: none;
+      }
+      .result strong {
+        display: block;
+        margin-bottom: 0.45rem;
+      }
+      .result ul {
+        padding-left: 1.3rem;
+        margin: 0.7rem 0 0;
+        max-height: 15rem;
+        overflow: auto;
+      }
+      .result li {
+        margin-bottom: 0.35rem;
+      }
+      .result.ok {
+        border-color: #b9dec9;
+        background: #f1fbf5;
+      }
+      .result.bad {
+        border-color: #ebc4c4;
+        background: #fff7f7;
+      }
+      .job {
+        overflow-wrap: anywhere;
+        font-size: 0.92rem;
+      }
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.65rem;
+        align-items: center;
+      }
+      footer {
+        max-width: 1100px;
+        margin: 0 auto 2rem;
+        padding: 0 1.5rem;
+        color: #607286;
+        font-size: 0.9rem;
+      }
+      @media (max-width: 760px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        header {
+          padding: 2rem 1.5rem 2.8rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Excel Import & Export Sandbox</h1>
+      <p>
+        Preview every import before committing it. Stream large exports directly
+        to your browser while watching row progress.
+      </p>
+    </header>
+    <main>
+      <div class="identity">
+        <label for="user">Demo user</label>
+        <input
+          id="user"
+          type="text"
+          value="demo"
+          maxlength="100"
+          autocomplete="off"
+        />
+        <small
+          >This header is for sandbox ownership only. It is not
+          authentication.</small
+        >
+      </div>
+      <div class="grid">
+        <section class="panel" aria-labelledby="import-heading">
+          <h2 id="import-heading">Import items</h2>
+          <p class="muted">
+            The workbook must match the ten item columns. Validate previews
+            errors and returns a token. Commit uploads the same file and token,
+            then validates current data before inserting rows.
+          </p>
+          <div class="step">
+            <div class="step-title">
+              <span class="number">1</span>
+              <h3>Get the template</h3>
+            </div>
+            <a
+              class="button-link secondary"
+              href="/api/imports/template"
+              download
+              >Download template</a
+            >
+          </div>
+          <form id="validate-form" class="step">
+            <div class="step-title">
+              <span class="number">2</span>
+              <h3>Validate a workbook</h3>
+            </div>
+            <label for="file">XLSX file (up to 10 MB and 10,000 rows)</label>
+            <input
+              id="file"
+              name="file"
+              type="file"
+              accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+              required
+            />
+            <button id="validate-button" type="submit">Validate file</button>
+            <p
+              id="validate-status"
+              class="status"
+              role="status"
+              aria-live="polite"
+            ></p>
+            <div id="validation-result" class="result" hidden>
+              <strong id="validation-summary"></strong>
+              <ul id="validation-errors"></ul>
+            </div>
+          </form>
+          <div class="step">
+            <div class="step-title">
+              <span class="number">3</span>
+              <h3>Create or update items</h3>
+            </div>
+            <p class="muted">
+              Commit rechecks the data, then creates new items and updates
+              existing ItemCodes in one transaction.
+            </p>
+            <button id="commit-button" type="button" disabled>
+              Commit import
+            </button>
+            <p
+              id="commit-status"
+              class="status"
+              role="status"
+              aria-live="polite"
+            ></p>
+          </div>
+        </section>
+        <section class="panel" aria-labelledby="export-heading">
+          <h2 id="export-heading">Export items</h2>
+          <p class="muted">
+            The API reads 1,000 rows at a time and streams XLSX bytes to your
+            browser. Keep the download open to see progress.
+          </p>
+          <div class="actions">
+            <button id="export-button" type="button">
+              Export and download
+            </button>
+          </div>
+          <p id="export-status" class="status" role="status" aria-live="polite">
+            No export started.
+          </p>
+          <p id="job-id" class="job muted"></p>
+        </section>
+      </div>
+    </main>
+    <footer>
+      The server keeps no export file. Export status expires after 24 hours.
+    </footer>
+    <script>
+      const byId = (id) => document.getElementById(id);
+      const user = () => byId('user').value.trim() || 'demo';
+      const format = (number) => new Intl.NumberFormat().format(number);
+      const rowCount = (number) =>
+        `${format(number)} ${number === 1 ? 'row' : 'rows'}`;
+      let validationToken = null;
+      let validatedFile = null;
+      let importOwner = null;
+      let jobId = null;
+      let jobOwner = null;
+      let pollTimer = null;
+
+      function status(id, message, state = '') {
+        const element = byId(id);
+        element.textContent = message;
+        element.dataset.state = state;
+      }
+
+      async function api(path, options = {}) {
+        const response = await fetch(path, options);
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(
+            typeof body.message === 'string'
+              ? body.message
+              : `Request failed (${response.status})`,
+          );
+        }
+        return body;
+      }
+
+      function clearImport() {
+        validationToken = null;
+        validatedFile = null;
+        importOwner = null;
+        byId('commit-button').disabled = true;
+        byId('validation-result').hidden = true;
+        status('validate-status', '');
+        status('commit-status', '');
+      }
+
+      byId('file').addEventListener('change', clearImport);
+      byId('user').addEventListener('input', clearImport);
+
+      byId('validate-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const file = byId('file').files[0];
+        if (!file) return;
+        clearImport();
+        const button = byId('validate-button');
+        button.disabled = true;
+        byId('file').disabled = true;
+        status('validate-status', 'Validating workbook…');
+        const form = new FormData();
+        form.set('file', file);
+        try {
+          const owner = user();
+          const result = await api('/api/imports/validate', {
+            method: 'POST',
+            headers: { 'x-demo-user': owner },
+            body: form,
+          });
+          if (user() !== owner) return;
+          validationToken = result.validationToken;
+          validatedFile = result.isValid && validationToken ? file : null;
+          importOwner = owner;
+          const errors = [
+            ...(result.errors || []),
+            ...(result.rowErrors || []).flatMap((row) =>
+              row.errors.map((error) => `Row ${row.rowNumber}: ${error}`),
+            ),
+          ];
+          byId('validation-summary').textContent =
+            `${result.isValid ? 'Ready to commit' : 'Validation failed'} · ${format(result.validRows)} of ${format(result.totalRows)} valid rows · ${format(result.createRows)} create · ${format(result.updateRows)} update`;
+          const list = byId('validation-errors');
+          list.replaceChildren();
+          for (const message of errors) {
+            const item = document.createElement('li');
+            item.textContent = message;
+            list.append(item);
+          }
+          const panel = byId('validation-result');
+          panel.className = `result ${result.isValid ? 'ok' : 'bad'}`;
+          panel.hidden = false;
+          byId('commit-button').disabled = !validatedFile;
+          status(
+            'validate-status',
+            result.isValid
+              ? 'Validation passed.'
+              : `${format(errors.length)} issue(s) found.`,
+            result.isValid ? 'success' : 'error',
+          );
+        } catch (error) {
+          status('validate-status', error.message, 'error');
+        } finally {
+          button.disabled = false;
+          byId('file').disabled = false;
+        }
+      });
+
+      byId('commit-button').addEventListener('click', async () => {
+        if (!validatedFile || !validationToken) return;
+        const button = byId('commit-button');
+        button.disabled = true;
+        status('commit-status', 'Committing import…');
+        try {
+          const form = new FormData();
+          form.set('file', validatedFile);
+          form.set('validationToken', validationToken);
+          const result = await api('/api/imports/commit', {
+            method: 'POST',
+            headers: { 'x-demo-user': importOwner },
+            body: form,
+          });
+          status(
+            'commit-status',
+            `${rowCount(result.importedRows)} created or updated.`,
+            'success',
+          );
+        } catch (error) {
+          status('commit-status', error.message, 'error');
+          button.disabled = false;
+        }
+      });
+
+      async function pollExport(id, owner) {
+        try {
+          const result = await api(`/api/exports/${encodeURIComponent(id)}`, {
+            headers: { 'x-demo-user': owner },
+          });
+          if (jobId !== id) return;
+          const rows =
+            result.progress?.processedRows ?? result.result?.totalRows ?? 0;
+          status(
+            'export-status',
+            result.status === 'FAILED'
+              ? `FAILED · ${result.error || 'Export could not finish'}`
+              : `${result.status} · ${rowCount(rows)} processed`,
+            result.status === 'FAILED'
+              ? 'error'
+              : result.status === 'COMPLETED'
+                ? 'success'
+                : '',
+          );
+          if (result.status === 'PENDING' || result.status === 'ACTIVE') {
+            pollTimer = setTimeout(() => pollExport(id, owner), 1000);
+          }
+        } catch (error) {
+          if (jobId === id) status('export-status', error.message, 'error');
+        }
+      }
+
+      byId('export-button').addEventListener('click', async () => {
+        clearTimeout(pollTimer);
+        const button = byId('export-button');
+        button.disabled = true;
+        status('export-status', 'Starting export…');
+        byId('job-id').textContent = '';
+        try {
+          jobOwner = user();
+          const result = await api('/api/exports', {
+            method: 'POST',
+            headers: { 'x-demo-user': jobOwner },
+          });
+          jobId = result.jobId;
+          const id = jobId;
+          const owner = jobOwner;
+          byId('job-id').textContent = `Job ID: ${id}`;
+          const response = await fetch(
+            `/api/exports/${encodeURIComponent(id)}/download`,
+            { headers: { 'x-demo-user': owner } },
+          );
+          if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(
+              body.message || `Download failed (${response.status})`,
+            );
+          }
+          void pollExport(id, owner);
+          const url = URL.createObjectURL(await response.blob());
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'ITEMS.xlsx';
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          clearTimeout(pollTimer);
+          await pollExport(id, owner);
+        } catch (error) {
+          clearTimeout(pollTimer);
+          status('export-status', error.message, 'error');
+        } finally {
+          button.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

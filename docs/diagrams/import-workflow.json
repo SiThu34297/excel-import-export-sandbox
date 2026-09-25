@@ -1,0 +1,184 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Excel import: validate, review, commit",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "browser",
+      "label": "Sandbox UI"
+    },
+    {
+      "id": "api",
+      "label": "NestJS import API"
+    },
+    {
+      "id": "database",
+      "label": "PostgreSQL"
+    },
+    {
+      "id": "rejection",
+      "label": "No write",
+      "variant": "exception"
+    }
+  ],
+  "mainPath": [
+    "chooseWorkbook",
+    "validateRequest",
+    "reviewPreview",
+    "commitRequest",
+    "verifyAndRecheck",
+    "upsertItems",
+    "commitResult"
+  ],
+  "nodes": [
+    {
+      "id": "chooseWorkbook",
+      "lane": "browser",
+      "col": 0,
+      "type": "frontend",
+      "label": "Choose XLSX",
+      "sublabel": "template columns"
+    },
+    {
+      "id": "validateRequest",
+      "lane": "api",
+      "col": 1,
+      "type": "backend",
+      "label": "Validate",
+      "sublabel": "POST /api/imports/validate",
+      "width": 112
+    },
+    {
+      "id": "reviewPreview",
+      "lane": "browser",
+      "col": 2,
+      "type": "frontend",
+      "label": "Review preview",
+      "sublabel": "creates / updates"
+    },
+    {
+      "id": "commitRequest",
+      "lane": "api",
+      "col": 3,
+      "type": "backend",
+      "label": "Commit upload",
+      "sublabel": "POST /api/imports/commit",
+      "width": 112
+    },
+    {
+      "id": "verifyAndRecheck",
+      "lane": "api",
+      "col": 4,
+      "type": "security",
+      "label": "Verify + check",
+      "sublabel": "hash, expiry, current refs",
+      "width": 128
+    },
+    {
+      "id": "upsertItems",
+      "lane": "database",
+      "col": 5,
+      "type": "database",
+      "label": "Upsert items",
+      "sublabel": "by ItemCode"
+    },
+    {
+      "id": "commitResult",
+      "lane": "browser",
+      "col": 5,
+      "type": "frontend",
+      "label": "Show result",
+      "sublabel": "importedRows"
+    },
+    {
+      "id": "invalidWorkbook",
+      "lane": "rejection",
+      "col": 2,
+      "type": "external",
+      "label": "Fix workbook",
+      "sublabel": "row errors; no token"
+    },
+    {
+      "id": "rejectCommit",
+      "lane": "rejection",
+      "col": 4,
+      "type": "external",
+      "label": "Reject commit",
+      "sublabel": "no rows written"
+    }
+  ],
+  "edges": [
+    {
+      "from": "chooseWorkbook",
+      "to": "validateRequest",
+      "label": "upload file",
+      "role": "main"
+    },
+    {
+      "from": "validateRequest",
+      "to": "reviewPreview",
+      "label": "valid preview",
+      "role": "main"
+    },
+    {
+      "from": "reviewPreview",
+      "to": "commitRequest",
+      "label": "confirm",
+      "role": "main"
+    },
+    {
+      "from": "commitRequest",
+      "to": "verifyAndRecheck",
+      "label": "verify token",
+      "role": "main"
+    },
+    {
+      "from": "verifyAndRecheck",
+      "to": "upsertItems",
+      "label": "valid now",
+      "role": "main"
+    },
+    {
+      "from": "upsertItems",
+      "to": "commitResult",
+      "label": "commit",
+      "role": "main"
+    },
+    {
+      "from": "validateRequest",
+      "to": "invalidWorkbook",
+      "label": "invalid rows",
+      "role": "error",
+      "variant": "security"
+    },
+    {
+      "from": "verifyAndRecheck",
+      "to": "rejectCommit",
+      "label": "invalid token or data",
+      "role": "error",
+      "variant": "security"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Preview only",
+      "items": [
+        "Valid rows are counted as creates or updates from current ItemCodes.",
+        "Only a fully valid workbook receives a token."
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Commit safety",
+      "items": [
+        "Token binds the reviewed file and demo user for 24 hours.",
+        "Commit revalidates and rolls back on any error."
+      ]
+    }
+  ]
+}

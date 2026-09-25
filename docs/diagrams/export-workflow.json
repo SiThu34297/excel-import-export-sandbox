@@ -1,0 +1,164 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Excel export: job ID, live progress, direct download",
+    "locale": "en",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "browser",
+      "label": "Sandbox UI"
+    },
+    {
+      "id": "api",
+      "label": "NestJS export API"
+    },
+    {
+      "id": "redis",
+      "label": "Redis job status"
+    },
+    {
+      "id": "database",
+      "label": "PostgreSQL"
+    }
+  ],
+  "mainPath": [
+    "startExport",
+    "createRecord",
+    "openDownload",
+    "pageItems",
+    "streamWorkbook",
+    "receiveWorkbook"
+  ],
+  "nodes": [
+    {
+      "id": "startExport",
+      "lane": "browser",
+      "col": 0,
+      "type": "frontend",
+      "label": "Start export",
+      "sublabel": "POST /api/exports"
+    },
+    {
+      "id": "createRecord",
+      "lane": "api",
+      "col": 1,
+      "type": "backend",
+      "label": "Create job ID",
+      "sublabel": "owner + PENDING"
+    },
+    {
+      "id": "jobId",
+      "lane": "redis",
+      "col": 2,
+      "type": "messagebus",
+      "label": "Store status",
+      "sublabel": "24-hour TTL"
+    },
+    {
+      "id": "openDownload",
+      "lane": "browser",
+      "col": 2,
+      "type": "frontend",
+      "label": "Open download",
+      "sublabel": "GET /api/exports/:id/download",
+      "width": 124
+    },
+    {
+      "id": "pageItems",
+      "lane": "database",
+      "col": 3,
+      "type": "database",
+      "label": "Page items",
+      "sublabel": "1,000 rows per query"
+    },
+    {
+      "id": "streamWorkbook",
+      "lane": "api",
+      "col": 4,
+      "type": "backend",
+      "label": "Stream XLSX",
+      "sublabel": "ExcelJS \u2192 HTTP response"
+    },
+    {
+      "id": "receiveWorkbook",
+      "lane": "browser",
+      "col": 5,
+      "type": "frontend",
+      "label": "Receive XLSX",
+      "sublabel": "one download per job"
+    },
+    {
+      "id": "pollStatus",
+      "lane": "browser",
+      "col": 3,
+      "type": "frontend",
+      "label": "Poll progress",
+      "sublabel": "GET /api/exports/:id"
+    }
+  ],
+  "edges": [
+    {
+      "from": "startExport",
+      "to": "createRecord",
+      "label": "request",
+      "role": "main"
+    },
+    {
+      "from": "createRecord",
+      "to": "openDownload",
+      "label": "return job ID",
+      "role": "main"
+    },
+    {
+      "from": "openDownload",
+      "to": "pageItems",
+      "label": "start streaming",
+      "role": "main"
+    },
+    {
+      "from": "pageItems",
+      "to": "streamWorkbook",
+      "label": "keyset pages",
+      "role": "main"
+    },
+    {
+      "from": "streamWorkbook",
+      "to": "receiveWorkbook",
+      "label": "XLSX bytes",
+      "role": "main"
+    },
+    {
+      "from": "openDownload",
+      "to": "pollStatus",
+      "label": "while open",
+      "role": "branch"
+    },
+    {
+      "from": "createRecord",
+      "to": "jobId",
+      "label": "save PENDING",
+      "role": "branch"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Live progress",
+      "items": [
+        "Redis stores processedRows after each 1,000-row page.",
+        "The UI polls status while the download response is open."
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "No export file",
+      "items": [
+        "ExcelJS writes bytes directly to the HTTP response.",
+        "A finished download cannot be repeated with the same job ID."
+      ]
+    }
+  ]
+}
