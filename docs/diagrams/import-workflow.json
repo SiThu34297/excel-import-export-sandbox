@@ -115,7 +115,7 @@
     {
       "from": "chooseWorkbook",
       "to": "validateRequest",
-      "label": "upload file",
+      "label": "upload bytes",
       "role": "main"
     },
     {
@@ -168,7 +168,7 @@
       "dot": "emerald",
       "title": "Preview only",
       "items": [
-        "Valid rows are counted as creates or updates from current ItemCodes.",
+        "The upload stays in memory; no workbook is saved on the server.",
         "Only a fully valid workbook receives a token."
       ]
     },
@@ -176,7 +176,7 @@
       "dot": "cyan",
       "title": "Commit safety",
       "items": [
-        "Token binds the reviewed file and demo user for 24 hours.",
+        "Token binds the workbook checksum and demo user for 24 hours.",
         "Commit revalidates and rolls back on any error."
       ]
     }

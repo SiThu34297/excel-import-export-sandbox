@@ -4,7 +4,6 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { createHash } from 'node:crypto';
-import { createReadStream } from 'node:fs';
 import type { PoolClient } from 'pg';
 import { Db } from './db';
 import {
@@ -112,9 +111,9 @@ export class ImportsService {
     return result;
   }
 
-  private async parse(path: string) {
+  private async parse(buffer: Buffer) {
     try {
-      return await readWorkbook(path);
+      return await readWorkbook(buffer);
     } catch {
       throw new BadRequestException(
         'Unreadable XLSX file or import exceeds 10,000 rows',
@@ -122,30 +121,28 @@ export class ImportsService {
     }
   }
 
-  private async digest(path: string) {
-    const hash = createHash('sha256');
-    for await (const chunk of createReadStream(path)) hash.update(chunk);
-    return hash.digest('hex');
+  private digest(buffer: Buffer) {
+    return createHash('sha256').update(buffer).digest('hex');
   }
 
-  async validateUpload(path: string, owner: string) {
-    const parsed = await this.parse(path);
+  async validateUpload(buffer: Buffer, owner: string) {
+    const parsed = await this.parse(buffer);
     const validation = await this.validate(parsed.rows, parsed.errors);
     return {
       ...validation,
       validationToken: validation.isValid
-        ? issueImportToken(await this.digest(path), owner)
+        ? issueImportToken(this.digest(buffer), owner)
         : null,
     };
   }
 
-  async commit(path: string, token: string, owner: string) {
+  async commit(buffer: Buffer, token: string, owner: string) {
     const expectedDigest = verifyImportToken(token, owner);
     if (!expectedDigest)
       throw new BadRequestException('Invalid or expired validation token');
-    if ((await this.digest(path)) !== expectedDigest)
+    if (this.digest(buffer) !== expectedDigest)
       throw new ConflictException('Workbook differs from the validated file');
-    const parsed = await this.parse(path);
+    const parsed = await this.parse(buffer);
     const client = await this.db.pool.connect();
     try {
       await client.query('BEGIN');

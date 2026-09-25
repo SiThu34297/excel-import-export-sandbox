@@ -49,12 +49,12 @@ function cellText(value: ExcelJS.CellValue): string {
 }
 
 export async function readWorkbook(
-  path: string,
+  buffer: Buffer,
 ): Promise<{ rows: ItemRow[]; errors: string[] }> {
   const rows: ItemRow[] = [];
   const errors: string[] = [];
   // ponytail: capped in-memory import; move staging into a streaming parser when files exceed 10k rows.
-  const zip = await unzipper.Open.file(path);
+  const zip = await unzipper.Open.buffer(buffer);
   if (
     zip.files.length > 100 ||
     zip.files.some((file) => !Number.isFinite(file.uncompressedSize)) ||
@@ -63,7 +63,10 @@ export async function readWorkbook(
   )
     throw new Error('Uncompressed workbook is too large');
   const workbook = new ExcelJS.Workbook();
-  await workbook.xlsx.readFile(path);
+  // ExcelJS's type declares ArrayBuffer, but its runtime accepts Node buffers.
+  await workbook.xlsx.load(
+    buffer as unknown as Parameters<typeof workbook.xlsx.load>[0],
+  );
   const sheet = workbook.worksheets[0];
   if (!sheet) errors.push('Workbook has no worksheet');
   else {

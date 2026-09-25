@@ -32,7 +32,7 @@ npm run build
 npm start
 ```
 
-Open [the sandbox UI](http://localhost:3000/api/ui). The default ports are API `3000`, PostgreSQL `5433`, and Redis `6380`. Override them with `PORT`, `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `DATA_DIR`, and `IMPORT_TOKEN_SECRET`.
+Open [the sandbox UI](http://localhost:3000/api/ui). The default ports are API `3000`, PostgreSQL `5433`, and Redis `6380`. Override them with `PORT`, `DATABASE_URL`, `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, and `IMPORT_TOKEN_SECRET`.
 
 `sql/schema.sql` initializes PostgreSQL only when its Docker volume is empty. To clear imported and seeded items while keeping reference codes:
 
@@ -43,12 +43,12 @@ docker compose exec -T postgres psql -U sandbox -d sandbox \
 
 ## How import works
 
-1. `POST /api/imports/validate` uploads an XLSX. The parser checks its ten template columns, row values, duplicate `ItemCode` values **within the workbook**, and database reference codes. It counts valid rows as `createRows` or `updateRows` by looking up current `ItemCode` values. A fully valid file receives a signed `validationToken`.
+1. `POST /api/imports/validate` uploads an XLSX into a bounded memory buffer. The parser checks its ten template columns, row values, duplicate `ItemCode` values **within the workbook**, and database reference codes. It counts valid rows as `createRows` or `updateRows` by looking up current `ItemCode` values. A fully valid file receives a signed `validationToken` containing a checksum of those bytes.
 2. The UI displays errors and the create/update preview. It keeps the selected file and token until Commit. Changing the file or demo user clears the preview.
-3. `POST /api/imports/commit` uploads the **same file and token**. The server checks the token signature, expiry, demo user, and file checksum. It then revalidates against the current database inside a transaction. If anything fails, it writes no rows.
+3. `POST /api/imports/commit` uploads the **same file bytes and token**. The server checks the token signature, expiry, demo user, and buffer checksum. It then parses the buffer again and revalidates against the current database inside a transaction. If anything fails, it writes no rows.
 4. PostgreSQL inserts new `ItemCode` values and updates existing ones with `ON CONFLICT (item_code) DO UPDATE`. Updates replace all supplied item columns while preserving the item ID and `created_at`.
 
-There is no `import_sessions` table. The server deletes each temporary upload after its request. Tokens expire after 24 hours. Set a stable `IMPORT_TOKEN_SECRET` if tokens must survive an API restart or work across multiple API processes; otherwise the sandbox generates a random secret at startup. The `x-demo-user` header is a teaching placeholder, **not authentication**.
+There is no `import_sessions` table or upload directory. Multer holds each upload in memory for its request, with a 10 MB file limit; the server retains neither upload between Validate and Commit. The browser sends the selected file again at Commit. Tokens expire after 24 hours. Set a stable `IMPORT_TOKEN_SECRET` if tokens must survive an API restart or work across multiple API processes; otherwise the sandbox generates a random secret at startup. The `x-demo-user` header is a teaching placeholder, **not authentication**.
 
 ### Test import in the UI
 
@@ -136,7 +136,7 @@ Use the returned `jobId` in both URLs. Do not wait for `COMPLETED` before openin
 
 | File | Responsibility |
 | --- | --- |
-| `src/imports.controller.ts` | Template, Validate, and Commit HTTP routes; temporary upload cleanup. |
+| `src/imports.controller.ts` | Template, Validate, and Commit HTTP routes; bounded in-memory uploads. |
 | `src/imports.service.ts` | Database-backed validation, create/update preview, token check, transaction, upsert. |
 | `src/import-core.ts` and `src/import-token.ts` | Workbook parsing and row rules; signed file receipt. |
 | `src/exports.controller.ts` | Start, status, and download HTTP routes. |
@@ -153,6 +153,6 @@ npm test
 npm run build
 ```
 
-Import limits are 10 MB uploaded XLSX, 30 MB expanded workbook, and 10,000 data rows. This bounded reader holds import rows in memory. For imports beyond that size, use a proven streaming reader and batch staging. The example reference codes are company `1`, distributor `D01`, supplier `S01`, UOMs `EA` and `BOX`, and tax `VAT`.
+Import limits are 10 MB uploaded XLSX, 30 MB expanded workbook, and 10,000 data rows. The XLSX bytes and parsed rows are held in memory only during each request. For imports beyond that size, use a proven streaming reader and batch staging. The example reference codes are company `1`, distributor `D01`, supplier `S01`, UOMs `EA` and `BOX`, and tax `VAT`.
 
 This sandbox omits the backoffice's Keycloak permissions, audit fields, distributor scoping, and full item relations. Add those controls before adapting the flow to production. Redis is used only for status; PostgreSQL could hold these small records if Redis is unavailable. See the [ExcelJS streaming writer documentation](https://github.com/exceljs/exceljs#streaming-xlsx).

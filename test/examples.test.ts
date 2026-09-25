@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { Db } from '../src/db';
 import { ImportsService } from '../src/imports.service';
@@ -23,7 +24,7 @@ test('larger example workbooks have the expected valid and invalid rows', async 
   } as unknown as Db;
   const service = new ImportsService(db);
   const valid = await service.validateUpload(
-    join(process.cwd(), 'examples/valid-5000.xlsx'),
+    await readFile(join(process.cwd(), 'examples/valid-5000.xlsx')),
     'demo',
   );
   assert.equal(valid.totalRows, 5000);
@@ -34,7 +35,7 @@ test('larger example workbooks have the expected valid and invalid rows', async 
   assert.ok(valid.validationToken);
 
   const invalid = await service.validateUpload(
-    join(process.cwd(), 'examples/invalid-cases.xlsx'),
+    await readFile(join(process.cwd(), 'examples/invalid-cases.xlsx')),
     'demo',
   );
   assert.equal(invalid.totalRows, 22);
