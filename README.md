@@ -19,7 +19,7 @@ A small teaching project for two flows:
 
 [Open the interactive export diagram](docs/diagrams/export-workflow.html) · [Diagram source](docs/diagrams/export-workflow.json)
 
-The HTML diagrams support search, focus, theme switching, and export. The SVG files are static previews for this README.
+The HTML diagrams support search, focus, theme switching, and export. The SVG files are static previews with a solid light background, so they stay readable in light and dark Markdown themes.
 
 ## Start the sandbox
 

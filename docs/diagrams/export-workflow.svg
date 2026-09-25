@@ -4961,6 +4961,8 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
           </pattern>
         </defs>
 
+        <rect x="0" y="0" width="822" height="652" fill="#f8fafc" aria-hidden="true" />
+
         <!-- Background Grid -->
         <rect width="100%" height="100%" fill="url(#grid)" />
 
